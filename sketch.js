@@ -1,136 +1,125 @@
-let sound1, sound2, sound3, sound4, sound5, sound6, sound7, sound8, sound9, sound10, sound11, sound12;
-let questionButton, answerButton, nextButton;
-let player, fileName;
-let answerRevealed = false;
+let soundFiles = [
+  "4-5.mp3",
+  "2-1.mp3",
+  "2-2.mp3",
+  "2-3.mp3",
+  "2-4.mp3",
+  "2-5.mp3",
+  "3-1.mp3",
+  "3-2.mp3",
+  "3-3.mp3",
+  "3-4.mp3",
+  "3-5.mp3",
+  "4-1.mp3",
+  "4-2.mp3",
+  "4-3.mp3",
+  "4-4.mp3"
+];
 
-// prevent 3+ repeats
-let lastChoice = -1;
-let secondLastChoice = -1;
+let sounds = [];
+let currentSound;
+let lastSoundIndex = -1;
+let questionButton, revealButton, nextButton;
+let answerVisible = false;
+let fileName = "";
 
 function preload() {
-  sound1  = loadSound('assets/Bb4 Saw.mp3');
-  sound2  = loadSound('assets/Bb4 Sine.mp3');
-  sound3  = loadSound('assets/Bb4 Sq.mp3');
-  sound4  = loadSound('assets/Bb4 Tri.mp3');
-  sound5  = loadSound('assets/C3 Saw.mp3');
-  sound6  = loadSound('assets/C3 Sin.mp3');
-  sound7  = loadSound('assets/C3 Sq.mp3');
-  sound8  = loadSound('assets/C3 Tri.mp3');
-  sound9  = loadSound('assets/D1 Saw.mp3');
-  sound10 = loadSound('assets/D1 Sine.mp3');
-  sound11 = loadSound('assets/D1 Sq.mp3');
-  sound12 = loadSound('assets/D1 Tri.mp3');
-}
-
-function setup() {
-  createCanvas(windowWidth, windowHeight);
-  background(0);
-  textAlign(CENTER, CENTER);
-  fill(255);
-
-  // Title
-  textSize(36);
-  text("Basic Waveform Practice", width/2, height/9);
-
-  // Subtitle
-  textSize(20);
-  text("Sine, Triangle, Sawtooth, Square", width/2, height/9 + 40);
-
-  // Layout variables
-  let rowH = 60;
-  let col1X = width/4;
-  let col2X = width/2;
-  let startY = height/3;
-
-  // QUESTION row
-  createDiv("QUESTION")
-    .position(col1X - 150, startY)
-    .style("color","white").style("font-size","24px");
-  questionButton = createButton("PLAY");
-  styleButton(questionButton, col2X, startY, "#00E938");
-  questionButton.mousePressed(toggleQuestion);
-
-  // ANSWER row
-  createDiv("ANSWER")
-    .position(col1X - 150, startY + rowH)
-    .style("color","white").style("font-size","24px");
-  answerButton = createButton("REVEAL");
-  styleButton(answerButton, col2X, startY + rowH, "#03A9F4");
-  answerButton.mousePressed(showAnswer);
-
-  // NEXT QUESTION button
-  nextButton = createButton("NEXT QUESTION");
-  nextButton.position(width/2 - 100, startY + rowH*2 + 20);
-  nextButton.size(200, rowH);
-  nextButton.style("font-size","20px");
-  nextButton.style("background-color","#FFC107");
-  nextButton.mousePressed(nextQuestion);
-
-  // Pick first sound
-  chooseSound();
-}
-
-function styleButton(btn, x, y, color) {
-  btn.position(x, y);
-  btn.size(120, 50);
-  btn.style("font-size","20px");
-  btn.style("background-color", color);
-  btn.style("color","#000");
-}
-
-function toggleQuestion() {
-  if (player && player.isPlaying()) {
-    player.stop();
-    resetButton(questionButton, "PLAY", "#00E938");
-  } else {
-    stopAll();
-    player.amp(0.8);
-    player.loop();
-    questionButton.html("STOP").style("background-color","#F80F05");
+  for (let i = 0; i < soundFiles.length; i++) {
+    sounds[i] = loadSound("sounds/" + soundFiles[i]);
   }
 }
 
-function resetButton(btn, label, color) {
-  btn.html(label);
-  btn.style("background-color", color);
+function setup() {
+  noCanvas();
+
+  createElement("h1", "Polyphonic Voices Quiz").style("text-align", "center");
+  createElement("h3", "Identify the Number of Voices").style("text-align", "center");
+
+  let container = createDiv().style("display", "flex").style("flex-direction", "column")
+    .style("align-items", "center").style("gap", "20px").style("margin-top", "30px");
+
+  // QUESTION row
+  let questionRow = createDiv().style("display", "flex").style("align-items", "center").style("gap", "20px");
+  questionRow.parent(container);
+  createSpan("QUESTION").parent(questionRow).style("font-weight", "bold").style("font-size", "18px");
+
+  questionButton = createButton("PLAY");
+  questionButton.parent(questionRow);
+  questionButton.style("background-color", "green").style("color", "white").style("padding", "10px 20px").style("border-radius", "8px").style("border", "none").style("cursor", "pointer");
+  questionButton.mousePressed(toggleQuestionSound);
+
+  // ANSWER row
+  let answerRow = createDiv().style("display", "flex").style("align-items", "center").style("gap", "20px");
+  answerRow.parent(container);
+  createSpan("ANSWER").parent(answerRow).style("font-weight", "bold").style("font-size", "18px");
+
+  revealButton = createButton("REVEAL");
+  revealButton.parent(answerRow);
+  revealButton.style("background-color", "blue").style("color", "white").style("padding", "10px 20px").style("border-radius", "8px").style("border", "none").style("cursor", "pointer");
+  revealButton.mousePressed(revealAnswer);
+
+  // ANSWER text
+  answerText = createP("");
+  answerText.parent(container);
+  answerText.style("font-size", "16px").style("font-weight", "bold").style("text-align", "center");
+
+  // NEXT QUESTION button
+  nextButton = createButton("NEXT QUESTION");
+  nextButton.parent(container);
+  nextButton.style("background-color", "#555").style("color", "white").style("padding", "10px 25px").style("border-radius", "8px").style("border", "none").style("cursor", "pointer");
+  nextButton.mousePressed(nextQuestion);
+
+  nextQuestion();
 }
 
-function stopAll() {
-  if (player) player.stop();
-  resetButton(questionButton, "PLAY", "#00E938");
+function toggleQuestionSound() {
+  if (currentSound && currentSound.isPlaying()) {
+    currentSound.stop();
+    questionButton.html("PLAY");
+    questionButton.style("background-color", "green");
+  } else {
+    stopAllSounds();
+    currentSound.play();
+    questionButton.html("STOP");
+    questionButton.style("background-color", "red");
+  }
 }
 
-function showAnswer() {
-  answerButton.html(fileName);
-  answerRevealed = true;
+function revealAnswer() {
+  answerVisible = true;
+  answerText.html("Answer: " + fileName);
 }
 
 function nextQuestion() {
-  stopAll();
-  chooseSound();
-  resetButton(answerButton, "REVEAL", "#03A9F4");
-  answerRevealed = false;
+  stopAllSounds();
+  questionButton.html("PLAY");
+  questionButton.style("background-color", "green");
+  answerText.html("");
+  answerVisible = false;
+
+  let newIndex;
+  do {
+    newIndex = floor(random(sounds.length));
+  } while (newIndex === lastSoundIndex);
+  lastSoundIndex = newIndex;
+
+  currentSound = sounds[newIndex];
+
+  // Determine answer based on file name
+  let thisFile = soundFiles[newIndex];
+  if (thisFile.startsWith("2-")) {
+    fileName = "2 Voices";
+  } else if (thisFile.startsWith("3-")) {
+    fileName = "3 Voices";
+  } else if (thisFile.startsWith("4-")) {
+    fileName = "4 Voices";
+  } else {
+    fileName = "Unknown";
+  }
 }
 
-function chooseSound() {
-  let choice;
-  do {
-    choice = int(random(12));
-  } while (choice === lastChoice && choice === secondLastChoice);
-
-  secondLastChoice = lastChoice;
-  lastChoice = choice;
-
-  if (choice === 0)  { player = sound1;  fileName = "Sawtooth"; }
-  else if (choice === 1)  { player = sound2;  fileName = "Sine"; }
-  else if (choice === 2)  { player = sound3;  fileName = "Square"; }
-  else if (choice === 3)  { player = sound4;  fileName = "Triangle"; }
-  else if (choice === 4)  { player = sound5;  fileName = "Sawtooth"; }
-  else if (choice === 5)  { player = sound6;  fileName = "Sine"; }
-  else if (choice === 6)  { player = sound7;  fileName = "Square"; }
-  else if (choice === 7)  { player = sound8;  fileName = "Triangle"; }
-  else if (choice === 8)  { player = sound9;  fileName = "Sawtooth"; }
-  else if (choice === 9)  { player = sound10; fileName = "Sine"; }
-  else if (choice === 10) { player = sound11; fileName = "Square"; }
-  else { player = sound12; fileName = "Triangle"; }
+function stopAllSounds() {
+  for (let s of sounds) {
+    if (s.isPlaying()) s.stop();
+  }
 }
