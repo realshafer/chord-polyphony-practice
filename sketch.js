@@ -25,7 +25,7 @@ let fileName = "";
 
 function preload() {
   for (let i = 0; i < soundFiles.length; i++) {
-    sounds[i] = loadSound("sounds/" + soundFiles[i]);
+    sounds[i] = loadSound("assets/" + soundFiles[i]);
   }
 }
 
